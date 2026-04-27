@@ -36,28 +36,59 @@ export const DashboardPage = () => {
   const [notifications, setNotifications] = useState<Notification[]>([])
 
   useEffect(() => {
-  const load = async () => {
-    setLoading(true)
-    const { data, error } = await supabase.rpc('get_dashboard_stats')
-    if (error) { setLoading(false); return }
-    
-    setStats({
-      revenue: data.month_revenue,
-      profit: data.month_profit,
-      products: data.total_products,
-      lowStock: data.low_stock_count,
-      pendingOrders: data.pending_orders,
-      todaySales: data.today_revenue,
-    })
-    setLowStockItems(data.low_stock_items || [])
-    setRecentOrders(data.recent_orders || [])
-    setLoading(false)
-  }
-  load()
-},  [location.pathname])
+      const load = async () => {
+        setLoading(true)
+        const thirtyDaysAgo = subDays(new Date(), 30).toISOString()
+        const today = new Date().toISOString().split('T')[0]
+
+        const [statsRes, chartRes, notifRes] = await Promise.all([
+          supabase.rpc('get_dashboard_stats'),
+          supabase.from('daily_revenue').select('*').gte('date', thirtyDaysAgo).order('date'),
+          supabase.from('notifications').select('*').eq('is_read', false).order('created_at', { ascending: false }).limit(5),
+        ])
+
+        // Stats from RPC
+        if (statsRes.data) {
+          setStats({
+            revenue: statsRes.data.month_revenue || 0,
+            profit: statsRes.data.month_profit || 0,
+            products: statsRes.data.total_products || 0,
+            lowStock: statsRes.data.low_stock_count || 0,
+            pendingOrders: statsRes.data.pending_orders || 0,
+            todaySales: statsRes.data.today_revenue || 0,
+          })
+          setLowStockItems(statsRes.data.low_stock_items || [])
+          setRecentOrders(statsRes.data.recent_orders || [])
+        }
+
+        // Chart data from daily_revenue view
+        const revenue = chartRes.data || []
+        setChartData(revenue.map(r => ({
+          ...r,
+          date: r.date,
+          revenue: Number(r.revenue) || 0,
+          profit: Number(r.profit) || 0,
+          cost: Number(r.cost) || 0,
+          total_sales: Number(r.total_sales) || 0,
+        })))
+
+        // Notifications
+        setNotifications(notifRes.data as Notification[] || [])
+
+        setLoading(false)
+      }
+
+      load()
+
+      // Re-fetch when window regains focus
+      const handleFocus = () => load()
+      window.addEventListener('focus', handleFocus)
+      return () => window.removeEventListener('focus', handleFocus)
+    }, [])
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  
 
   if (loading) return (
     <div className="flex items-center justify-center h-64"><Spinner size={32} className="text-white/30" /></div>
