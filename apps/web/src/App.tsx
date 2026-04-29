@@ -22,6 +22,7 @@ import { RestockPage } from './pages/admin/RestockPage'
 import { NotificationsPage } from './pages/admin/NotificationsPage'
 import { SettingsPage } from './pages/admin/SettingsPage'
 import { WorkerActivityPage } from './pages/admin/WorkerActivityPage'
+import { SalesHistoryPage } from './pages/admin/SalesHistoryPage'
 
 import { StockPage } from './pages/worker/StockPage'
 import { SellPage } from './pages/worker/SellPage'
@@ -29,6 +30,7 @@ import { SearchPage } from './pages/worker/SearchPage'
 import { ActivityPage } from './pages/worker/ActivityPage'
 
 import { OrderPortalPage } from './pages/customer/OrderPortalPage'
+import { InstallPrompt } from './components/ui/InstallPrompt'
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } })
 
@@ -57,6 +59,7 @@ export default function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="workers/:id/activity" element={<WorkerActivityPage />} />
+            <Route path="sales-history" element={<SalesHistoryPage />} />
           </Route>
 
           {/* Worker */}
@@ -76,6 +79,8 @@ export default function App() {
           success: { iconTheme: { primary: '#10B981', secondary: '#fff' } },
           error: { iconTheme: { primary: '#E8191A', secondary: '#fff' } },
         }} />
+
+        <InstallPrompt />
       </BrowserRouter>
     </QueryClientProvider>
   )

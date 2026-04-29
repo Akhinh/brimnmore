@@ -44,12 +44,24 @@ export const SettingsPage = () => {
   const handleEmailChange = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newEmail.trim()) { toast.error('Enter a new email'); return }
-    if (!/\S+@\S+\.\S+/.test(newEmail)) { toast.error('Enter a valid email'); return }
-    if (newEmail === profile?.email) { toast.error('That is already your email'); return }
+    if (!/\S+@\S+\.\S+/.test(newEmail.trim())) { 
+      toast.error('Enter a valid email address')
+      return 
+    }
+    if (newEmail.trim() === profile?.email) { 
+      toast.error('This is already your current email')
+      return 
+    }
     setChangingEmail(true)
-    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
-    if (error) { toast.error(error.message); setChangingEmail(false); return }
-    toast.success('Confirmation sent! Check both your old and new email to confirm the change.')
+    const { error } = await supabase.auth.updateUser({ 
+      email: newEmail.trim() 
+    })
+    if (error) { 
+      toast.error(error.message)
+      setChangingEmail(false)
+      return 
+    }
+    toast.success('Confirmation sent! Check your new email to confirm.')
     setShowEmailForm(false)
     setNewEmail('')
     setChangingEmail(false)

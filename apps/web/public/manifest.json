@@ -1,0 +1,19 @@
+{
+  "name": "Brill 'n' More",
+  "short_name": "BnM",
+  "description": "Wholesale Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#E8191A",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/admin" },
+    { "name": "Inventory", "url": "/admin/inventory" },
+    { "name": "Orders", "url": "/admin/orders" }
+  ]
+}

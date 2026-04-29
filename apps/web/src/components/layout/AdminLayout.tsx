@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3,
-  Settings, Bell, LogOut, Menu, X, ChevronRight, QrCode, RefreshCcw
+  Settings, Bell, LogOut, Menu, X, ChevronRight, QrCode, RefreshCcw, History
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -16,6 +16,7 @@ const navItems = [
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/admin/order-links', icon: QrCode, label: 'Order Links' },
   { to: '/admin/restock', icon: RefreshCcw, label: 'Restock' },
+  { to: '/admin/sales-history', icon: History, label: 'Sales History' },
 ]
 
 export const AdminLayout = () => {
