@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Sun, Moon, Monitor, User, Bell, Shield } from 'lucide-react'
+import { Sun, Moon, Monitor, User, Bell, Shield, Mail } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -12,13 +12,21 @@ export const SettingsPage = () => {
   const { profile } = useAuth()
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('bnm-theme') as Theme) || 'dark')
   const [fullName, setFullName] = useState(profile?.full_name || '')
+  const [newEmail, setNewEmail] = useState('')
+  const [showEmailForm, setShowEmailForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [changingEmail, setChangingEmail] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('bnm-theme', theme)
     const root = document.documentElement
-    if (theme === 'light') root.classList.remove('dark')
-    else root.classList.add('dark')
+    if (theme === 'dark') root.classList.add('dark')
+    else if (theme === 'light') root.classList.remove('dark')
+    else {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      if (prefersDark) root.classList.add('dark')
+      else root.classList.remove('dark')
+    }
   }, [theme])
 
   const saveProfile = async (e: React.FormEvent) => {
@@ -31,6 +39,20 @@ export const SettingsPage = () => {
     if (error) { toast.error('Failed to save'); setSaving(false); return }
     toast.success('Profile updated!')
     setSaving(false)
+  }
+
+  const handleEmailChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newEmail.trim()) { toast.error('Enter a new email'); return }
+    if (!/\S+@\S+\.\S+/.test(newEmail)) { toast.error('Enter a valid email'); return }
+    if (newEmail === profile?.email) { toast.error('That is already your email'); return }
+    setChangingEmail(true)
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+    if (error) { toast.error(error.message); setChangingEmail(false); return }
+    toast.success('Confirmation sent! Check both your old and new email to confirm the change.')
+    setShowEmailForm(false)
+    setNewEmail('')
+    setChangingEmail(false)
   }
 
   const themes: { value: Theme; label: string; icon: React.ReactNode }[] = [
@@ -76,9 +98,51 @@ export const SettingsPage = () => {
           <h2 className="font-display font-semibold text-white text-sm">Profile</h2>
         </div>
         <form onSubmit={saveProfile} className="space-y-4">
-          <Input dark label="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} />
-          <Input dark label="Email" value={profile?.email || ''} disabled
-            helper="Email cannot be changed here" />
+          <Input dark label="Full Name" value={fullName}
+            onChange={e => setFullName(e.target.value)} />
+
+          {/* Current email display */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold font-display uppercase tracking-wider text-white/60">
+              Email Address
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-11 rounded-xl border border-white/10 bg-white/4 px-4 flex items-center">
+                <span className="text-white/50 text-sm font-body">{profile?.email}</span>
+              </div>
+              <Button type="button" size="sm" variant="ghost"
+                onClick={() => setShowEmailForm(!showEmailForm)}
+                icon={<Mail size={13} />}
+                className="text-brand-red hover:bg-brand-red/10 border border-brand-red/30 shrink-0">
+                Change
+              </Button>
+            </div>
+          </div>
+
+          {/* Change email form */}
+          {showEmailForm && (
+            <div className="bg-white/4 rounded-xl border border-white/8 p-4 space-y-3 animate-slide-up">
+              <p className="text-white/40 text-xs font-body">
+                A confirmation link will be sent to both your current and new email address.
+              </p>
+              <Input dark label="New Email Address" type="email"
+                placeholder="new@email.com" value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                icon={<Mail size={14} />} />
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" size="sm"
+                  onClick={() => { setShowEmailForm(false); setNewEmail('') }}
+                  className="flex-1 text-white/40 hover:text-white hover:bg-white/8">
+                  Cancel
+                </Button>
+                <Button type="button" size="sm" loading={changingEmail}
+                  onClick={handleEmailChange} className="flex-1">
+                  Send Confirmation
+                </Button>
+              </div>
+            </div>
+          )}
+
           <Input dark label="Role" value="Administrator" disabled />
           <Button type="submit" loading={saving} size="sm">Save Changes</Button>
         </form>
