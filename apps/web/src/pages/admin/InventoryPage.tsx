@@ -9,13 +9,90 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { SkeletonGrid } from '../../components/ui/Skeleton'
 import type { Product, ProductType, Manufacturer } from '../../types'
 import toast from 'react-hot-toast'
+import { Upload, X, ImageIcon } from 'lucide-react'
 
 const fmt = (v: number) => `₦${v.toLocaleString('en-NG')}`
 
 const defaultForm = {
   name: '', product_type_id: '', manufacturer_id: '', description: '',
   quantity: '', unit: 'carton', buying_price: '', selling_price: '',
-  expiry_date: '', low_stock_threshold: '10', is_featured: false
+  expiry_date: '', low_stock_threshold: '10', is_featured: false,
+  image_url: '',
+}
+
+
+const ImageUpload = ({
+  value, onChange, dark
+}: {
+  value: string; onChange: (url: string) => void; dark?: boolean
+}) => {
+  const [uploading, setUploading] = useState(false)
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return }
+
+    setUploading(true)
+    const ext = file.name.split('.').pop()
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .upload(filename, file, { upsert: true })
+
+    if (error) { toast.error('Upload failed'); setUploading(false); return }
+
+    const { data: urlData } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(data.path)
+
+    onChange(urlData.publicUrl)
+    setUploading(false)
+    toast.success('Image uploaded!')
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className={`text-xs font-semibold font-display uppercase tracking-wider ${dark ? 'text-white/60' : 'text-brand-gray'}`}>
+        Product Image (optional)
+      </label>
+
+      {value ? (
+        <div className="relative w-full h-32 rounded-xl overflow-hidden border border-white/10 group">
+          <img src={value} alt="Product" className="w-full h-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500">
+            <X size={13} className="text-white" />
+          </button>
+        </div>
+      ) : (
+        <label className={[
+          'w-full h-24 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-all',
+          uploading ? 'opacity-50 pointer-events-none' : '',
+          dark
+            ? 'border-white/10 hover:border-white/25 text-white/30 hover:text-white/50'
+            : 'border-brand-gray-light hover:border-brand-gray text-brand-gray',
+        ].join(' ')}>
+          <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+          {uploading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs">Uploading...</span>
+            </div>
+          ) : (
+            <>
+              <Upload size={18} />
+              <span className="text-xs font-body">Click to upload image</span>
+              <span className="text-[10px] opacity-60">PNG, JPG up to 2MB</span>
+            </>
+          )}
+        </label>
+      )}
+    </div>
+  )
 }
 
 export const InventoryPage = () => {
@@ -57,6 +134,7 @@ export const InventoryPage = () => {
       buying_price: String(p.buying_price), selling_price: String(p.selling_price),
       expiry_date: p.expiry_date || '', low_stock_threshold: String(p.low_stock_threshold),
       is_featured: p.is_featured,
+      image_url: p.image_url || '',
     })
     setShowModal(true)
   }
@@ -79,6 +157,7 @@ export const InventoryPage = () => {
       expiry_date: form.expiry_date || null,
       low_stock_threshold: parseInt(form.low_stock_threshold),
       is_featured: form.is_featured,
+      image_url: form.image_url || null,
       ...(editing ? {} : { total_stocked: parseInt(form.quantity) }),
     }
     try {
@@ -156,6 +235,11 @@ export const InventoryPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map(p => (
             <div key={p.id} className="bg-brand-black-soft rounded-2xl border border-white/8 p-4 hover:border-white/15 transition-all duration-200 group">
+              {p.image_url && (
+                <div className="w-full h-28 rounded-xl overflow-hidden mb-3">
+                <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                </div>
+              )}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -221,6 +305,13 @@ export const InventoryPage = () => {
             <Input dark label="Expiry Date (optional)" type="date" value={form.expiry_date} onChange={f('expiry_date')} />
             <div className="sm:col-span-2">
               <Input dark label="Description (optional)" placeholder="Short description of the product" value={form.description} onChange={f('description')} />
+            </div>
+            <div className="sm:col-span-2">
+              <ImageUpload
+                dark
+                value={form.image_url}
+                onChange={url => setForm(prev => ({ ...prev, image_url: url }))}
+              />
             </div>
             <div className="sm:col-span-2 flex items-center gap-3">
               <input type="checkbox" id="featured" checked={form.is_featured}
